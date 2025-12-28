@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Polaroid Camera</title>
+  <style>
+    body {
+      margin: 0;
+      background: #0f0f0f;
+      display: grid;
+      place-items: center;
+      height: 100vh;
+    }
+    #canvas3d {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+  </style>
+
+  <script type="module">
+    import { Application } from "https://unpkg.com/@splinetool/runtime@1.0.69/build/runtime.js";
+
+    let app;
+
+    window.onload = async () => {
+      const canvas = document.getElementById("canvas3d");
+      app = new Application(canvas);
+
+      // 🔗 Your Spline scene URL
+      await app.load("https://my.spline.design/polaroidgocopy-5a7K4IIRdey0pgvejmwHfTys/");
+
+      // 👇 Click anywhere in the scene to take a photo for now
+      canvas.addEventListener("click", takePhotoAndApply);
+    };
+
+    async function takePhotoAndApply() {
+      try {
+        // 🎥 Ask for webcam access
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const video = document.createElement("video");
+        video.srcObject = stream;
+        await video.play();
+
+        // 📸 Capture one frame
+        const shot = document.createElement("canvas");
+        shot.width = video.videoWidth;
+        shot.height = video.videoHeight;
+        const ctx = shot.getContext("2d");
+        ctx.drawImage(video, 0, 0);
+
+        // Stop the camera now that we have the image
+        stream.getTracks().forEach(t => t.stop());
+
+        // 🖼 Convert to image URL
+        const imgURL = shot.toDataURL("image/png");
+
+        // 🔍 Find the object (name it `photoTexture` in Spline)
+        const obj = app.findObjectByName("photoTexture");
+
+        if (!obj) {
+          console.warn("Object named `photoTexture` not found in Spline.");
+          return;
+        }
+
+        // 🎨 Apply texture
+        obj.material.map = imgURL;
+        obj.material.needsUpdate = true;
+
+      } catch (err) {
+        console.error(err);
+        alert("Camera access failed. Make sure you're on HTTPS or localhost.");
+      }
+    }
+  </script>
+</head>
+
+<body>
+  <canvas id="canvas3d"></canvas>
+</body>
+</html>
